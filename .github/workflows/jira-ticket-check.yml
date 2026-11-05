@@ -39,7 +39,7 @@ jobs:
               "branch name": pr.head.ref || ""
             };
 
-            const jiraRegex = /\b[A-Z][A-Z0-9]+-\d+\b/i;
+            const jiraRegex = /\b[A-Z][A-Z0-9]{1,9}-[1-9][0-9]*\b/;
 
             const foundIn = Object.entries(locations)
               .filter(([, value]) => jiraRegex.test(value))
