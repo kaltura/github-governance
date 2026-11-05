@@ -1,0 +1,56 @@
+name: JIRA Ticket Check
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check-jira:
+    name: JIRA Ticket Check
+    if: true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR for JIRA ticket
+        uses: actions/github-script@v9
+        with:
+          script: |
+            if (context.eventName === "merge_group") {
+              core.info("PR was validated before entering the merge queue.");
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const pull_number = context.payload.pull_request.number;
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number
+            });
+
+            const locations = {
+              "PR title": pr.title || "",
+              "PR description": pr.body || "",
+              "branch name": pr.head.ref || ""
+            };
+
+            const jiraRegex = /\b[A-Z][A-Z0-9]+-\d+\b/i;
+
+            const foundIn = Object.entries(locations)
+              .filter(([, value]) => jiraRegex.test(value))
+              .map(([location]) => location);
+
+            if (foundIn.length === 0) {
+              core.setFailed(
+                "Merge blocked: no JIRA ticket key was found. " +
+                "Add a key such as SECF-1234 to the PR title, " +
+                "PR description, or branch name, and re-run this check."
+              );
+            } else {
+              core.info(`JIRA ticket found in: ${foundIn.join(", ")}`);
+            }
